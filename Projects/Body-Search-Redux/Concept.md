@@ -335,20 +335,69 @@ No inspection takes place.
 
 **Guard:**
 
-> Nice try. But you're not talking your way out of this. Now, will you cooperate or not?
+> Nice try. But you're not talking your way out of this. Now, are you going to cooperate, or do I need to make things difficult?
 
-The negotiation option becomes unavailable for the remainder of the encounter.
+After a failed persuasion attempt, the guard becomes more suspicious.
 
-The player must choose:
+The player can no longer avoid an inspection without consequences.
 
-- Cooperate with the inspection.
-- Refuse the inspection.
+Three options remain available:
+
+**[1] Cooperate with the Inspection**
+
+> Fine. I'll let you search me.
+
+The encounter proceeds to **Scenario A — Cooperate with the Inspection**.
+
+**[2] Refuse the Inspection**
+
+> No. You're not searching me.
+
+The encounter proceeds to **Scenario B — Refuse the Inspection**.
+
+**[3] Offer an Adult Favor**
+
+> Perhaps I can offer you something else in exchange for staying out of jail...
+
+**Guard:**
+
+> Very well. But don't think that gets you off completely. I'm still taking anything illegal you're carrying.
+
+**Planned success probability:** 100%.
+
+Unlike an adult proposition made before attempting persuasion, this option does not prevent the inspection.
+
+The following sequence applies:
+
+1. The guard accepts the player's proposition.
+2. The player complies with the required body search.
+3. The system inspects the player's inventory.
+4. Stolen goods and contraband are confiscated.
+5. The SexLab interaction begins.
+6. After the scene ends, the player is released.
+7. No additional fine or imprisonment is imposed.
+8. The encounter ends with normal cleanup.
+
+**Important:** The player's adult proposition avoids imprisonment and financial penalties, but does not prevent confiscation.
+
+This distinction is a core gameplay rule of Body Search Redux.
 
 ### 7.3 Negotiation Restrictions
 
 The player must not be able to repeat failed persuasion attempts indefinitely.
 
-An unsuccessful persuasion roll permanently disables the negotiation branch for that encounter.
+Only one persuasion attempt is allowed per encounter.
+
+After a failed persuasion attempt:
+
+- The persuasion option becomes unavailable.
+- The player may still cooperate with the inspection.
+- The player may refuse the inspection.
+- The player may offer an adult favor to avoid imprisonment and fines, but confiscation becomes mandatory.
+
+An immediate adult proposition, selected before attempting persuasion, allows the player to avoid both inspection and confiscation.
+
+An adult proposition selected after failed persuasion requires an inspection and confiscation of illegal goods before the SexLab interaction.
 
 Whether persuasion should incorporate the player's Speech skill remains an open design question.
 
@@ -403,21 +452,31 @@ The fine should not accidentally clear unrelated existing bounties unless explic
 
 ### 8.3 Consequence 3 — Adult Proposition
 
-The player offers a sexual favor to avoid imprisonment or paying the financial penalty.
+The player offers a sexual favor to avoid imprisonment or paying the financial penalty after illegal goods have been discovered.
 
 **Planned success probability:** 100%.
 
-A SexLab scene begins.
+This option is available after a completed inspection, regardless of whether the player initially cooperated or reached this stage through another dialogue branch.
 
-When the scene finishes:
+The following rules apply:
 
-- The guard releases the player.
-- The encounter terminates.
-- Normal gameplay resumes.
+1. All detected stolen goods and contraband are confiscated.
+2. The guard accepts the player's proposition.
+3. A SexLab interaction begins.
+4. The system waits for the scene to finish.
+5. The guard releases the player.
+6. No additional fine or imprisonment is imposed.
+7. The encounter terminates and normal gameplay resumes.
 
-**Important design decision:** Goods already confiscated during the inspection remain confiscated. The adult alternative avoids the additional penalty; it does not reverse confiscation.
+**Important design rule:**
 
-This behavior is provisional and may be revised.
+An adult proposition made before any failed persuasion attempt can prevent the inspection entirely.
+
+An adult proposition made after failed persuasion, or after illegal goods have already been discovered, does not reverse or prevent confiscation.
+
+The adult interaction only replaces the additional criminal penalties.
+
+Confiscated items remain confiscated.
 
 ---
 
@@ -591,6 +650,7 @@ A single central manager should coordinate guard inspections.
 ### Proposed State Machine
 
 ```text
+
 IDLE
   |
   v
@@ -609,15 +669,19 @@ DIALOGUE
   |      |
   |      +--> SEARCH
   |              |
-  |              +--> CLEAN INVENTORY
-  |              |        |
-  |              |        v
-  |              |      RELEASE
+  |              +--> CLEAN --> RELEASE
   |              |
   |              +--> ILLEGAL ITEMS
   |                       |
   |                       v
+  |                   CONFISCATION
+  |                       |
+  |                       v
   |                   CONSEQUENCES
+  |                       |
+  |                       +--> PRISON
+  |                       +--> FINE
+  |                       +--> ADULT FAVOR --> RELEASE
   |
   +--> REFUSE
   |      |
@@ -627,13 +691,28 @@ DIALOGUE
   |
   +--> NEGOTIATE
          |
-         +--> ADULT INTERACTION --> RELEASE
+         +--> IMMEDIATE ADULT FAVOR
+         |       |
+         |       +--> NO SEARCH
+         |       +--> NO CONFISCATION
+         |       +--> SEXLAB --> RELEASE
          |
          +--> PERSUASION
                   |
                   +--> SUCCESS --> RELEASE
                   |
-                  +--> FAILURE --> COOPERATE / REFUSE
+                  +--> FAILURE
+                           |
+                           +--> COOPERATE --> SEARCH
+                           |
+                           +--> REFUSE --> CRIME HANDOFF
+                           |
+                           +--> ADULT FAVOR
+                                    |
+                                    +--> SEARCH
+                                    +--> CONFISCATION
+                                    +--> SEXLAB
+                                    +--> RELEASE
 
 ALL COMPLETED OR ABORTED PATHS
                   |
@@ -642,6 +721,7 @@ ALL COMPLETED OR ABORTED PATHS
                   |
                   v
                  IDLE
+
 ```
 
 The final technical state machine may use fewer or more internal states.
